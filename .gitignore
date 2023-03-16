@@ -1,0 +1,11 @@
+.idea
+.ipynb_checkpoints
+Models/*
+venv/*
+!venv/requirements.txt
+**/__pycache__
+*.json
+*.h5
+wandb
+EvaluationSequences
+Weigths
