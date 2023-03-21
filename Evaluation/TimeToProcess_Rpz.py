@@ -26,7 +26,6 @@ splitSize=200
 count=  0
 morph: Morphology = MorphologyGetter.getMorphologyFromDeviceName(device)
 
-
 def readFileAndAddData(fileData: str, fileLabel: str, actionsNames: List[str], gestures: List[LabeledSequence],
                        fileSampleName):
     """
@@ -77,69 +76,71 @@ def voxelisationOfThePiecesOfGestures(representationExtractor, gesture: LabeledS
 
     return voxelizationGesture, numberPosturePerChunk
 
-# pathDB = "C:\workspace2\Datasets\Chalearn\\"
-pathDB = "/srv/tempdd/wmocaer/data/Chalearn/"
+def runTimeTest():
 
-protocolFile = pathDB + "Split\split.txt"  # get the protocol file, train and test set is specified
-pathAction = pathDB + "Actions.csv"  # get the protocol file, train and test set is specified
-pathInputData = pathDB + "Data\\"
-pathInputLabel =  pathDB + "Label\\"
-pathOut =  pathDB + "Log\TimeVoxelisation.txt"
-finfo = open(protocolFile, "r")
-filesTrainTest = finfo.readlines()
-listFilesTest = list(
-    map(lambda s: s.strip(), filesTrainTest[3].strip().split(
-        ",")))  # list of test files is on the 4th linefor i, fileSample in enumerate(listFilesTest):
+    # pathDB = "C:\workspace2\Datasets\Chalearn\\"
+    pathDB = "/srv/tempdd/wmocaer/data/Chalearn/"
 
-finfo = open(pathAction, "r")
-actions = finfo.readlines()
-actions = list(map(lambda s: s.split(";")[1].strip(), actions))
-finfo.close()
+    protocolFile = pathDB + "Split\split.txt"  # get the protocol file, train and test set is specified
+    pathAction = pathDB + "Actions.csv"  # get the protocol file, train and test set is specified
+    pathInputData = pathDB + "Data\\"
+    pathInputLabel =  pathDB + "Label\\"
+    pathOut =  pathDB + "Log\TimeVoxelisation.txt"
+    finfo = open(protocolFile, "r")
+    filesTrainTest = finfo.readlines()
+    listFilesTest = list(
+        map(lambda s: s.strip(), filesTrainTest[3].strip().split(
+            ",")))  # list of test files is on the 4th linefor i, fileSample in enumerate(listFilesTest):
 
-print("Testing set")
-gesturesTest: List[LabeledSequence] = []
-print("Reading...")
-for i, fileSample in enumerate(listFilesTest):
-    if (i == 1 or i % 20 == 0):
-        print(i, "/", len(listFilesTest))
-    readFileAndAddData(pathInputData + fileSample, pathInputLabel + fileSample, actions, gesturesTest, fileSample)
-print("Filtering...")
-for i, gesture in enumerate(gesturesTest):
-    if (i == 1 or i % 10 == 0):
-        print(i, "on", len(gesturesTest))
-    filterLowPass(gesture)
+    finfo = open(pathAction, "r")
+    actions = finfo.readlines()
+    actions = list(map(lambda s: s.split(";")[1].strip(), actions))
+    finfo.close()
+
+    print("Testing set")
+    gesturesTest: List[LabeledSequence] = []
+    print("Reading...")
+    for i, fileSample in enumerate(listFilesTest):
+        if (i == 1 or i % 20 == 0):
+            print(i, "/", len(listFilesTest))
+        readFileAndAddData(pathInputData + fileSample, pathInputLabel + fileSample, actions, gesturesTest, fileSample)
+    print("Filtering...")
+    for i, gesture in enumerate(gesturesTest):
+        if (i == 1 or i % 10 == 0):
+            print(i, "on", len(gesturesTest))
+        filterLowPass(gesture)
 
 
-representationToEval =  [1,     1,2,3,4,6,7]
-thresholdCuDis =        [1E-10, 3,3,3,3,3,3]
-toleranceMoveThreshold = 0
+    representationToEval =  [1,     1,2,3,4,6,7]
+    thresholdCuDis =        [1E-10, 3,3,3,3,3,3]
+    toleranceMoveThreshold = 0
 
-strOut = "Representation;Threshold;Time;ResultingFramesAvg;Time/frame\n"
+    strOut = "Representation;Threshold;Time;ResultingFramesAvg;Time/frame\n"
 
-for id,idRpz in enumerate(representationToEval):
-    thresholdCuDi = thresholdCuDis[id]
-    print("Representation", idRpz, "with threshold", thresholdCuDi)
+    for id,idRpz in enumerate(representationToEval):
+        thresholdCuDi = thresholdCuDis[id]
+        print("Representation", idRpz, "with threshold", thresholdCuDi)
 
-    representationExtractor = MapperIdVoxelizer.map1sq(idRpz, dimensionEuclideanSpace,
-                                                           toleranceMoveThreshold,
-                                                           thresholdCuDi,
-                                                           jointsSelected, morph)
-    # init to avoid initialisation time in the loop
-    voxelizationGesture, numberPosturePerSegment = voxelisationOfThePiecesOfGestures(representationExtractor, gesturesTest[-1])
+        representationExtractor = MapperIdVoxelizer.map1sq(idRpz, dimensionEuclideanSpace,
+                                                               toleranceMoveThreshold,
+                                                               thresholdCuDi,
+                                                               jointsSelected, morph)
+        # init to avoid initialisation time in the loop
+        voxelizationGesture, numberPosturePerSegment = voxelisationOfThePiecesOfGestures(representationExtractor, gesturesTest[-1])
 
-    resulting = 0
-    #start chronometer
-    start = time.time()
-    for gesture in gesturesTest:
-        voxelizationGesture, numberPosturePerSegment = voxelisationOfThePiecesOfGestures(representationExtractor, gesture)
-        resulting+= len(voxelizationGesture)
-    end = time.time()
-    print("len gesture set", len(gesturesTest))
-    print("Representation", idRpz, "with threshold", thresholdCuDi, "took", end - start, "s", "resulting in",
-          resulting/len(gesturesTest), "frames", "avg time is ", (end - start)/len(gesturesTest), "s/frame")
-    strOut += str(idRpz) + ";" + str(thresholdCuDi) + ";" + str(end - start) + ";" +\
-              str(resulting/len(gesturesTest)) + ";"+ str( (end - start)/len(gesturesTest))+ "s/frame"+"\n"
+        resulting = 0
+        #start chronometer
+        start = time.time()
+        for gesture in gesturesTest:
+            voxelizationGesture, numberPosturePerSegment = voxelisationOfThePiecesOfGestures(representationExtractor, gesture)
+            resulting+= len(voxelizationGesture)
+        end = time.time()
+        print("len gesture set", len(gesturesTest))
+        print("Representation", idRpz, "with threshold", thresholdCuDi, "took", end - start, "s", "resulting in",
+              resulting/len(gesturesTest), "frames", "avg time is ", (end - start)/len(gesturesTest), "s/frame")
+        strOut += str(idRpz) + ";" + str(thresholdCuDi) + ";" + str(end - start) + ";" +\
+                  str(resulting/len(gesturesTest)) + ";"+ str( (end - start)/len(gesturesTest))+ "s/frame"+"\n"
 
-f = open(pathOut, "w")
-f.write(strOut)
-f.close()
+    f = open(pathOut, "w")
+    f.write(strOut)
+    f.close()
