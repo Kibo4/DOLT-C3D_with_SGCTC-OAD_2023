@@ -6,7 +6,7 @@ import pandas as pd
 
 db = "Chalearn"
 pathDB, separator = "C:\workspace2\\Datasets\\" + db + "/", "/"
-pathDB, separator = "/srv/tempdd/wmocaer/data/" + db + "/", "/"
+# pathDB, separator = "/srv/tempdd/wmocaer/data/" + db + "/", "/"
 pathOutModels = pathDB + "modelRunsGrouped"+separator
 
 API = wandb.Api()
@@ -44,10 +44,10 @@ df = df.groupby("group").agg({"name": list, "group": "count"})
 
 # print warnings if there is no 5 runs in a group
 for group in df.index:
-    if df.loc[group, "group"] != 5:
+    if df.loc[group, "group"] <5:
         print("WARNING : group " + group + " has " + str(df.loc[group, "group"]) + " runs")
     else:
-        print("GOOD : group " + group +" has 5 runs")
+        print("GOOD    : group " + group +" has ",df.loc[group, "group"], "runs")
 # visualize the groups
 print(df)
 
@@ -57,7 +57,8 @@ if not os.path.exists(pathOutModels):
 
 # create one file for each group, the name is the groupe name, the content is the list of the runs in the group
 for group in df.index:
-    with open(pathOutModels + group, "w") as f:
-        f.write(",".join(df.loc[group, "name"]))
+    if df.loc[group, "group"] >= 5:
+        with open(pathOutModels + group, "w") as f:
+            f.write(",".join(df.loc[group, "name"][:5]))
 
 print("Done")
