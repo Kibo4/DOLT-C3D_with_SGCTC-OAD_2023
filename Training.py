@@ -230,7 +230,7 @@ if resuming:
 
 else:
     wandBRun = wandb.init(project=PROJETNAME_WANDB, entity=ENTITYNAME_WANDB, save_code=True, reinit=True,
-                          tags=tags, config=configAll, dir=pathDB + "wandb",mode="disabled")
+                          tags=tags, config=configAll, dir=pathDB + "wandb")
     wandBRunDir = wandBRun.dir
     configAll["wandbId"] = wandBRun.id
     configAll["wandbName"] = wandBRun.name
