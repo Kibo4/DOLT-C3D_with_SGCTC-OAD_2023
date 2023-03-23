@@ -81,16 +81,16 @@ def runTimeTest():
     # pathDB = "C:\workspace2\Datasets\Chalearn\\"
     pathDB = "/srv/tempdd/wmocaer/data/Chalearn/"
 
-    protocolFile = pathDB + "Split\split.txt"  # get the protocol file, train and test set is specified
+    protocolFile = pathDB + "Split/split.txt"  # get the protocol file, train and test set is specified
     pathAction = pathDB + "Actions.csv"  # get the protocol file, train and test set is specified
-    pathInputData = pathDB + "Data\\"
-    pathInputLabel =  pathDB + "Label\\"
-    pathOut =  pathDB + "Log\TimeVoxelisation.txt"
+    pathInputData = pathDB + "Data/"
+    pathInputLabel =  pathDB + "Label/"
+    pathOut =  pathDB + "Log/TimeVoxelisation.txt"
     finfo = open(protocolFile, "r")
     filesTrainTest = finfo.readlines()
     listFilesTest = list(
         map(lambda s: s.strip(), filesTrainTest[3].strip().split(
-            ",")))  # list of test files is on the 4th linefor i, fileSample in enumerate(listFilesTest):
+            ",")))[:50]  # list of test files is on the 4th linefor i, fileSample in enumerate(listFilesTest):
 
     finfo = open(pathAction, "r")
     actions = finfo.readlines()
@@ -115,7 +115,7 @@ def runTimeTest():
     thresholdCuDis =        [1E-10, 3,3,3,3,3,3]
     toleranceMoveThreshold = 0
 
-    strOut = "Representation;Threshold;Time;ResultingFramesAvg;Time/frame\n"
+    strOut = "Representation;Threshold;Time;ResultingFramesAvg;Time/seq\n"
 
     for id,idRpz in enumerate(representationToEval):
         thresholdCuDi = thresholdCuDis[id]
@@ -137,9 +137,9 @@ def runTimeTest():
         end = time.time()
         print("len gesture set", len(gesturesTest))
         print("Representation", idRpz, "with threshold", thresholdCuDi, "took", end - start, "s", "resulting in",
-              resulting/len(gesturesTest), "frames", "avg time is ", (end - start)/len(gesturesTest), "s/frame")
+              resulting/len(gesturesTest), "frames", "avg time is ", (end - start)/len(gesturesTest), "s/seq")
         strOut += str(idRpz) + ";" + str(thresholdCuDi) + ";" + str(end - start) + ";" +\
-                  str(resulting/len(gesturesTest)) + ";"+ str( (end - start)/len(gesturesTest))+ "s/frame"+"\n"
+                  str(resulting/len(gesturesTest)) + ";"+ str( (end - start)/len(gesturesTest))+ "s/seq"+"\n"
 
     f = open(pathOut, "w")
     f.write(strOut)
