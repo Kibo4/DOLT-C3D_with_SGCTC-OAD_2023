@@ -12,7 +12,7 @@ pathOutModels = pathDB + "modelRunsGrouped"+separator
 API = wandb.Api()
 #state finished and splitsize != 70000
 RUNS = API.runs("OLT-C3D_OAD_focus_on_earliness",
-                filters={"state": "finished", "tags" :{"$in": [db]},
+                filters={"state": "finished","config.weightPrior":0.2, "tags" :{"$in": [db]},
                          "config.splitSize": {"$ne": 70000}})
                          # "config.useSegmentationGuidedCTC":False})
 # group by these keys in config :
@@ -58,6 +58,6 @@ if not os.path.exists(pathOutModels):
 for group in df.index:
     if df.loc[group, "group"] >= 10:
         with open(pathOutModels + group, "w") as f:
-            f.write(",".join(df.loc[group, "name"][:5]))
+            f.write(",".join(df.loc[group, "name"]))
 
 print("Done")

@@ -1,6 +1,9 @@
 import random
 
+import numpy as np
+
 from Tools import DataSetReader
+from Tools.Gesture.MorphologyGetter import MorphologyGetter
 
 
 def doExtractNewG3DData():
@@ -19,7 +22,7 @@ def doExtractNewG3DData():
     test = sequencesOfFighting[26:]
     print("train : ",train, " len : ",len(train))
     print("test : ",test, " len : ",len(test))
-
+    device = "kinectV1"
     # each label is a sequence in the same order : [1, 2, 3, 4, 5]
     # the labels are
     # 1;PunchRight
@@ -73,7 +76,12 @@ def doExtractNewG3DData():
             #reverse data, format of each line is x y z x y z x y z ..., reversing become -x y z -x y z -x y z ...
             for i in range(len(firstData)):
                 firstData[i] = " ".join([str(-float(x)) if j%3 == 0 and float(x)!=0 else x for j,x in enumerate(firstData[i].split(" "))])
-
+            firstData = np.array([firstData[i].split(" ") for i in range(len(firstData))], dtype=np.float32)  # -> [time,nbjoint*3]
+            firstData = firstData.reshape([firstData.shape[0], firstData.shape[1] // 3, 3])  # -> [time,nbjoint,3]
+            mapping = [MorphologyGetter.getMirrorMember(device, i) for i in range(firstData.shape[1])]
+            firstData = firstData[:, mapping, :]  # -> [time,nbjoint,3], mirrored
+            firstData = firstData.reshape([firstData.shape[0], firstData.shape[1] * 3])  # -> [time,nbjoint*3]
+            firstData = [" ".join([str(x) for x in firstData[i]])+"\n" for i in range(len(firstData))]
         secondLabels = [(classid, start - whereToSplitOnData,
                         end - whereToSplitOnData,actionPoint - whereToSplitOnData) for classid,start,end,actionPoint in secondLabels]
 
@@ -81,7 +89,14 @@ def doExtractNewG3DData():
             secondLabels = [(mapMirroring[classid],start,end,actionPoint) for classid,start,end,actionPoint in secondLabels]
             #reverse data, format of each line is x y z x y z x y z ..., reversing become -x y z -x y z -x y z ...
             for i in range(len(secondData)):
-                secondData[i] = " ".join(["-" + x if j%3 == 0 else x for j,x in enumerate(secondData[i].split(" "))])
+                secondData[i] = " ".join([str(-float(x)) if j%3 == 0 and float(x)!=0 else x for j,x in enumerate(secondData[i].split(" "))])
+            secondData = np.array([secondData[i].split(" ") for i in range(len(secondData))],
+                                 dtype=np.float32)  # -> [time,nbjoint*3]
+            secondData = secondData.reshape([secondData.shape[0], secondData.shape[1] // 3, 3])  # -> [time,nbjoint,3]
+            mapping = [MorphologyGetter.getMirrorMember(device, i) for i in range(secondData.shape[1])]
+            secondData = secondData[:, mapping, :]  # -> [time,nbjoint,3], mirrored
+            secondData = secondData.reshape([secondData.shape[0], secondData.shape[1] * 3])  # -> [time,nbjoint*3]
+            secondData = [" ".join([str(x) for x in secondData[i]])+"\n" for i in range(len(secondData))]
         print("---------------------------------------")
 
         print("seq : ",seq, " whereToSplit : ",whereToSplit, " whereToSplitOnData : ",whereToSplitOnData,)

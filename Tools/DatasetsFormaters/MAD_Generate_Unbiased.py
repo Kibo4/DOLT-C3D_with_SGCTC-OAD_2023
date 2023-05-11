@@ -1,6 +1,9 @@
 import random
 
+import numpy as np
+
 from Tools import DataSetReader
+from Tools.Gesture.MorphologyGetter import MorphologyGetter
 
 
 def doExtractnewMADData():
@@ -14,7 +17,7 @@ def doExtractnewMADData():
     pathLabel = "C:\workspace2\Datasets\MAD\Label\\"
     pathData = "C:\workspace2\Datasets\MAD\Data\\"
     pathSplit = "C:\workspace2\Datasets\MAD\Split\\"
-
+    device = "kinectV1"
 
 
     # each label is a sequence in the same order : [1, 2, 3, 4, 5]
@@ -60,8 +63,8 @@ def doExtractnewMADData():
     # - variable order by mirroring the sequence
 
     #mirroring index changement based on left/right, if not mirrored, the index is the same
-    mapMirroring = {1:1, 2:2, 3:3, 4:4, 5:5, 6:19, 7:18, 8:20, 9:21, 10:22, 11:23, 12:24, 13:25, 14:26, 15:27, 16:29,
-                    17:28, 18:6, 19:7, 20:8, 21:9, 22:10, 23:11, 24:12, 25:13, 26:14, 27:15, 28:17, 29:16, 30:30, 31:31,
+    mapMirroring = {1:1, 2:2, 3:3, 4:4, 5:5, 6:19, 7:18, 8:20, 9:21, 10:22, 11:23, 12:24, 13:25, 14:26, 15:27, 16:28,
+                    17:29, 18:6, 19:7, 20:8, 21:9, 22:10, 23:11, 24:12, 25:13, 26:14, 27:15, 28:16, 29:17, 30:30, 31:31,
                     32:32, 33:33, 34:34, 35:35}
 
     # mirror of Running is Running
@@ -135,6 +138,16 @@ def doExtractnewMADData():
                 #reverse data, format of each line is x y z x y z x y z ..., reversing become -x y z -x y z -x y z ...
                 for idata in range(len(data)):
                     data[idata] = " ".join([str(-float(x)) if j%3 == 0 and float(x)!=0 else x for j,x in enumerate(data[idata].split(" "))])
+                # into a numpy array to have [time,nbjoint,3], each line of data is a frame
+                data = np.array([data[i].split(" ") for i in range(len(data))],dtype=np.float32) # -> [time,nbjoint*3]
+                data = data.reshape([data.shape[0],data.shape[1]//3,3]) # -> [time,nbjoint,3]
+                mapping = [MorphologyGetter.getMirrorMember(device,i) for i in range(data.shape[1])]
+                data = data[:,mapping,:] # -> [time,nbjoint,3], mirrored
+                data = data.reshape([data.shape[0],data.shape[1]*3]) # -> [time,nbjoint*3]
+                data = [" ".join([str(x) for x in data[i]])+"\n" for i in range(len(data))]
+
+
+
             else:
                 labelsSplitted[i] = [(classid,start-whereToSplit[-1],end-whereToSplit[-1]) for classid,start,end in labelsSplitted[i]]
             datas.append(data)

@@ -40,7 +40,7 @@ config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 def run():
     pathDB = "C:\\workspace2\\Datasets\\Chalearn\\"
-    db = "Chalearn"
+    db = "MSRC12"
     pathDB, separator = "/srv/tempdd/wmocaer/data/" + db + "/", "/"
     # separator = "\\"
     PROJECTNAMEWANDB = "OLT-C3D_OAD_focus_on_earliness"

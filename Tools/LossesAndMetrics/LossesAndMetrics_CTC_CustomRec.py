@@ -37,7 +37,7 @@ def lossCTCSimpleCustomRec(y_true_flat, y_pred):
 def lossCTCSimpleCustomRec_prior(y_true_flat, y_pred, weightPrior):
     """
     :param prior:
-    :param y_true_flat : [Batch,None] : 7first values is dimensions :( None(batch), U/2, 3, None(batch), Time, U, U
+    :param y_true_flat : [None] : 7first values is dimensions :( None(batch), U/2, 3, None(batch), Time, U, U
     # :param y_true: ([Batch,None(U/2),3] , [Batch],  [Batch,seq, U(padded),U(padded)])
     # :param y_pred: (Batch,Time,1+nbClass)
     :return:
