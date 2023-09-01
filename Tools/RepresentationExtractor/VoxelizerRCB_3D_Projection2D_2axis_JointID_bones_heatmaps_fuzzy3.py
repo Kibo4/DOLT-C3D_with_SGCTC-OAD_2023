@@ -164,8 +164,8 @@ class VoxelizerRCB_3D_Projection2D_2axis_JointID_bones_heatmaps_fuzzy3(Mirroirab
                 # add the position of each joint if displacement is big enough with the last in the list
                 for i in range(len(self.jointSelected)):
                     pos = postureNormalizedPlus1.joints[self.jointSelected[i]].position
-                    box[int(pos[0]), int(pos[1]), 0, 0] += repeat + 1
-                    box[self.sizeBox[0]+int(pos[2]), int(pos[1]), 0, 0] += repeat + 1
+                    box[int(pos[0]), int(pos[1]), 0, 0] += repeat + 1  # Trace map here, Front view
+                    box[self.sizeBox[0]+int(pos[2]), int(pos[1]), 0, 0] += repeat + 1 # Trace map here, side view
 
 
                 postureNormalized = postureNormalizedPlus1

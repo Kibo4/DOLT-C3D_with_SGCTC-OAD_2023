@@ -35,8 +35,12 @@ def download_weights(name, whereToDownload,projectName= "OLT-C3D_OAD_focus_on_ea
         raise NoFileWeightsFound("no Weights file found")
     shutil.move(whereToDownload+"/Weights/weights/Weights/model",whereToDownload+"/Weights/",
                 copy_function=shutil.copytree)
-    shutil.move(whereToDownload + "/Weights/weights/config.txt",whereToDownload+"/Weights/",
-                copy_function=shutil.copytree)
+    try :
+        shutil.move(whereToDownload + "/Weights/weights/config.txt",whereToDownload+"/Weights/",
+                    copy_function=shutil.copytree)
+    except FileNotFoundError:
+        shutil.move(whereToDownload + "/Weights/weights/Weights/config.txt", whereToDownload + "/Weights/",
+                    copy_function=shutil.copytree)
 
 
 def getRun(name, projectName= "OLT-C3D_OAD_focus_on_earliness")->Run:

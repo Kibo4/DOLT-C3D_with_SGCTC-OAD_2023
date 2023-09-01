@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 
 
-def drawSequence(name, GTStartEnd, predictionBound, predictionBoundWithoutBlank, seqLen, nbClass) -> Any:
+def drawSequence(name, GTStartEnd, predictionBound, predictionBoundWithoutBlank, seqLen, nbClass,returnPlt=False) -> Any:
     """
     Tool to draw the result of the prediction
     produce an image where
@@ -126,4 +126,4 @@ def drawSequence(name, GTStartEnd, predictionBound, predictionBoundWithoutBlank,
     img = fig2img(fig)
     plt.close(fig)
 
-    return img
+    return fig if returnPlt else img

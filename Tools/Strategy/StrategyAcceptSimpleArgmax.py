@@ -23,12 +23,12 @@ class StrategyAcceptSimpleArgmax:
         assert len(prediction) == len(repeat)
         prediction = tf.argmax(prediction, axis=1).numpy() - 1  # to have -1 for reject/blank, just for clarty
 
-        listeFinalePred = np.zeros([sum(repeat)], dtype=int) - 1 # temporal domain
+        listeFinalePred = np.zeros([sum(repeat)], dtype=int) - 1 # temporal domain, set -1 everywhere
         cumulativeSumRepeat = np.cumsum(repeat) - 1  # -1 to correspond with temporal index
         """
         Example:
         repeat = [2,3,4,3]
-        means that for the first chunk, two frames has been used, for the second chunk, 3 frames has been used.
+        means that for the first chunk, two frames has been used, for the second chunk, 3 frames has been used..
         
         the cumulative less 1 is [1,4,8,11]
         for the first chunk, frames of index 0,1 (0-based) are used
