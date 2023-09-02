@@ -1,4 +1,20 @@
 # Online Action Detection : focus on earliness with OLT-C3D and CTC
+This code has been used to make the experiments of the following paper:
+
+Early Action Detection at instance-level driven by a controlled CTC-Based Approach", William Mocaër; Eric Anquetil; Richard Kulpa. July 2023
+
+```
+@article{mocaer2023,
+  title = {Early Action Detection at instance-level driven by a controlled CTC-Based Approach},
+  author = {Mocaër, William and Anquetil, Eric and Kulpa, Richard},
+  year = {2023},
+  journal = {},
+  volume = {},
+  number = {},
+  pages = {},
+  doi = {},
+}
+```
 ## packages informations
 
 ### Package Evaluation
