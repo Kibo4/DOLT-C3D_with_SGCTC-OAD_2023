@@ -36,7 +36,8 @@ Contains multiples subpackages :
 * Strategy: contain the online strategy used in testing
 ## Requirements
 Tested with python 3.10 and tensorflow 2.10.1. See the full list of requierements in the file environment.yml
-
+Run the traning with libtcmalloc minimal ! (LD_PRELOAD=/usr/lib/libtcmalloc_minimal.so.4 python Training.py")
+-> otherwise there will be memory problem during training due to data augmentation (known tf bug)
 ## Preprocessing
 Contains the scripts to build the different representations (heatmaps-based), used in preprocessing
 It takes as input (args) the db name, the "db.info" name and "hp.info" name
@@ -58,7 +59,7 @@ Any "Voxelizer" designate a representation strategy
 
 
 ## Dataset format requirements
-See https://www-intuidoc.irisa.fr/oad-datasets/ for more information about the datasets and their format
+See https://www-shadoc.irisa.fr/oad-datasets/ for more information about the datasets and their format
 
 
 ## Training
