@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from Tools.LossesAndMetrics.ctc_normal_customRec_tf import ctc_loss_log_custom, ctc_loss_log_normal,\
-    ctc_loss_log_custom_prior
+from Tools.LossesAndMetrics.ctc_normal_customRec_tf import ctc_loss_log_custom, ctc_loss_log_normal, \
+    ctc_loss_log_custom_prior, ctc_loss_log_custom_prior_with_recMatrix_computation
 
 
 def lossCTCSimpleCustomRec(y_true_flat, y_pred):
@@ -48,7 +48,7 @@ def lossCTCSimpleCustomRec_prior(y_true_flat, y_pred, weightPrior):
     rest = flatted[shapes[0]*shapes[1]*shapes[2]:]
     pred_len = rest[:shapes[0]]
     matRec_flatted = rest[shapes[0]:]
-    y_true_argmax = tf.reshape(d_flatted,[shapes[0], shapes[1] , shapes[2]])[:,:,0]
+    y_true_argmax = tf.reshape(d_flatted,[shapes[0], shapes[1] , shapes[2]])[:,:,0] # [Batch, U/2]
     recurrenceMatrix = tf.cast(tf.reshape(matRec_flatted,[shapes[3], shapes[4] , shapes[5], shapes[6]]),tf.float32)
 
 
@@ -60,6 +60,36 @@ def lossCTCSimpleCustomRec_prior(y_true_flat, y_pred, weightPrior):
     loss = ctc_loss_log_custom_prior(vectorForCTC,
                             y_true_argmax,
                             pred_len[:, tf.newaxis], length[:, tf.newaxis],recurrenceMatrix,weightPrior)
+
+    return tf.reduce_mean(loss)
+
+def lossCTCSimpleCustomRec_prior_cumputationMatrixInLoss(y_true_flat, y_pred, weightPrior,doSSG):
+    """
+    :param prior:
+    :param y_true_flat : [None] : 7first values is dimensions :( None(batch), U/2, 3, None(batch), Time, U, U
+    # :param y_true: ([Batch,None(U/2),3] , [Batch],  [Batch,seq, U(padded),U(padded)])
+    # :param y_pred: (Batch,Time,1+nbClass)
+    :return:
+    """
+    shapes = y_true_flat[:7] # None, U/2, 3,  None, Time, U, U
+    flatted = y_true_flat[7:]
+    d_flatted = flatted[:shapes[0]*shapes[1]*shapes[2]]
+    rest = flatted[shapes[0]*shapes[1]*shapes[2]:]
+    pred_len = rest[:shapes[0]]
+    matRec_flatted = rest[shapes[0]:]
+    y_true_argmax = tf.reshape(d_flatted,[shapes[0], shapes[1] , shapes[2]])[:,:,0] # [Batch, U/2, 3]
+    y_true_argmax_3 = tf.reshape(d_flatted,[shapes[0], shapes[1] , shapes[2]])[:,:,:] # [Batch, U/2, 3]
+    # recurrenceMatrix = tf.cast(tf.reshape(matRec_flatted,[shapes[3], shapes[4] , shapes[5], shapes[6]]),tf.float32)
+
+
+    y_true_argmax_ragged = tf.ragged.boolean_mask(y_true_argmax, y_true_argmax != -1)
+    length = y_true_argmax_ragged.row_lengths(
+        axis=1)  # <tf.Tensor: shape=(2,), dtype=int64, numpy=array([7, 8], dtype=int64)>
+
+    vectorForCTC = y_pred[:, :, :]
+    loss = ctc_loss_log_custom_prior_with_recMatrix_computation(vectorForCTC,
+                            y_true_argmax_3,
+                            pred_len[:, tf.newaxis], length[:, tf.newaxis],weightPrior,doSSG)
 
     return tf.reduce_mean(loss)
 

@@ -298,6 +298,226 @@ def ctc_loss_log_custom_prior(pred, token, pred_len, token_len, recurrenceMatrix
     cost = -labels_prob
     return cost
 
+
+def compute_recurrence_Matrix_from_labels(labels, seqLen,doSSG):
+    """
+
+    :param labels: [batch, U, 3] (3 is classId, start, end)
+    :param seqLen: [batch]
+    :param doSSG: bool
+    :return:
+    """
+    eps_nan = -1e8
+    batch = tf.shape(labels)[0]
+    twoUP1 = tf.shape(labels)[1] * 2 + 1 # 2U+1
+    U = tf.shape(labels)[1]
+    # twoUP1 = len(labels) * 2 + 1 # 2U+1
+    #labels.sort(key=lambda x: x[1])
+    token = labels[:, :, 0]  # (batch, U)
+
+
+    # truncate start and end to be inside the sequence (0 and seqLen-1), do it in the labels, keep the same shape
+    labels = tf.concat([tf.expand_dims(tf.clip_by_value(labels[:,:,0], 0, seqLen-1), axis=2),
+                        tf.expand_dims(tf.clip_by_value(labels[:,:,1], 0, seqLen-1), axis=2),
+                        tf.expand_dims(labels[:,:,2], axis=2)], axis=2)
+
+
+    token_with_blank = tf.concat((tf.zeros([batch, U, 1], dtype=tf.int32), tf.cast(token[:, :, tf.newaxis], tf.int32)),
+                                 axis=2)  # (batch, U,2)
+    token_with_blank = tf.reshape(token_with_blank, [batch, -1])  # (batch, 2*U)
+    # add a blank at the end of elems
+    token_with_blank = tf.concat((token_with_blank, tf.zeros([batch, 1], dtype=tf.int32)), axis=1)  # (batch, 2U+1)
+    # token_with_blank: [blank, index_e1,blank, index_e2, .... eU, blank]
+    token_with_blank = tf.where(token_with_blank == -1, tf.zeros_like(token_with_blank), token_with_blank)
+
+    length = tf.shape(token_with_blank)[1]  # 2U+1
+
+
+    # recurrence relation
+    consecutiveDifferent = tf.cast(tf.not_equal(token_with_blank[:, :-2], token_with_blank[:, 2:]), tf.float32)
+
+    # pad with two blanks on the left
+    consecutiveDifferent = tf.concat((tf.zeros((batch, 2), dtype=tf.float32), consecutiveDifferent), axis=1) # (batch, 2U+1)
+
+    # elements not blank in the GT (one on two)
+    notBlanksToken = tf.cast(tf.not_equal(token_with_blank, 0), tf.float32)
+    # kind of mask : True = Not consecutive identic elements, False = consecutive identic elements: can skip the blank,
+    sec_diag = consecutiveDifferent * notBlanksToken  # (batch, 2U+1)
+
+    # m_eye : identity matrix for k=0, ones of are shifted by k
+
+    # recurrence_relation : (batch, 2U+1, 2U+1)
+    recurrence_relation = \
+        tf.repeat((tf.eye(length) + m_eye(length, k=1))[tf.newaxis], repeats=batch, axis=0) + \
+        tf.repeat(m_eye(length, k=2)[tf.newaxis], repeats=batch, axis=0) * sec_diag[:, tf.newaxis, :]
+    # tf.print("recurrence_relation\n",recurrence_relation,summarize=-1)
+    # recurrence_relation = eps_nan * (tf.ones_like(recurrence_relation) - recurrence_relation)
+
+    # repeat for each time in seqLen -> (batch, seqLen, 2U+1, 2U+1)
+    recurrence_relation = tf.repeat(recurrence_relation[:, tf.newaxis, :, :], repeats=seqLen, axis=1)
+
+    # considering the index of frames (start and end) labels[:, :, 1:3], create the tensor of the shape [batch,seqLen,U] with ones if the class is present in the frame
+    # (batch, seqLen, U, 2)
+    actionPosition = tf.repeat(tf.expand_dims(labels[:, :, 1:3], axis=1), repeats=seqLen, axis=1)
+    # (batch, seqLen, U)
+    actionPosition = tf.cast(tf.logical_and(tf.repeat(tf.range(seqLen)[tf.newaxis,:,tf.newaxis], repeats=U, axis=2) >= actionPosition[:, :, :, 0]-1,
+                                       tf.repeat(tf.range(seqLen)[tf.newaxis,:,tf.newaxis], repeats=U, axis=2) <= actionPosition[:, :, :, 1]-1), tf.float32)
+
+    # in the last dim, add zeros between each element, and before and after
+    start_end = actionPosition[:, :, :, tf.newaxis]
+    start_end = tf.pad(start_end, [[0, 0], [0, 0], [0, 0], [0, 1]], constant_values=1)
+    # (batch, seqLen, 2U+1, 2U+1)
+    start_end = tf.reshape(start_end, [batch, seqLen, twoUP1-1])
+    #pad with zeros on the left (only one zero at right)
+    start_end = tf.concat((tf.ones((batch, seqLen, 1), dtype=tf.float32), start_end), axis=2)
+
+    recurrence_relation = recurrence_relation * (start_end[:, :, tf.newaxis, :])
+    # print("start_end", start_end[0])
+
+
+    if not doSSG: #HSG
+        # remove actions to blank if we are on action
+        blankPosition = 1-actionPosition
+        blank_start_end = blankPosition[:, :, :, tf.newaxis]
+        blank_start_end = tf.pad(blank_start_end, [[0, 0], [0, 0], [0, 0], [1, 0]], constant_values=1)
+        blank_start_end = tf.reshape(blank_start_end, [batch, seqLen, twoUP1-1])
+        blank_start_end = tf.concat((tf.ones((batch, seqLen, 1), dtype=tf.float32), blank_start_end), axis=2)
+        # print("blank_start_end", blank_start_end[0])
+        recurrence_relation1 = recurrence_relation * (blank_start_end[:, :, tf.newaxis, :])
+
+        actionPositionShifted2 = tf.pad(actionPosition[:,1:,:], [[0,0],[0,1],[0,1]])
+        #shift of two on the last dim, take from 2: and pad with zeros
+        #make a logical and between consecutive columns of last dim (convert to bool)
+        boolAct = tf.cast(actionPosition[:, :, :], tf.bool)
+        boolAct2 = tf.cast(actionPositionShifted2[:, :, 1:], tf.bool)
+        actionPositionShifted2 = tf.cast(tf.logical_and(boolAct, boolAct2), tf.float32)
+        # pas with zeros on the left
+        # actionPositionShifted2 = tf.pad(tf.cast(actionPositionShifted2,tf.float32), [[0,0],[0,0],[1,0]]) # (batch, seqLen, U)
+        actionPositionShifted2 = actionPositionShifted2[:, :, :,tf.newaxis]
+        actionPositionShifted2 = tf.pad(actionPositionShifted2, [[0, 0], [0, 0], [0, 0], [1, 0]], constant_values=1)
+        actionPositionShifted2 = tf.reshape(actionPositionShifted2, [batch, seqLen, twoUP1-1])
+        actionPositionShifted2 = tf.concat((tf.ones((batch, seqLen, 1), dtype=tf.float32), actionPositionShifted2), axis=2)
+        # print("actionPositionShifted2", actionPositionShifted2[0])
+
+        recurrence_relation2 = recurrence_relation * (actionPositionShifted2[:, :, tf.newaxis, :]) #* sec_diag[:, tf.newaxis,tf.newaxis, :]
+
+        #make  logical or between the two recurrence relations (convert to bool)
+        boolAct = tf.cast(recurrence_relation2, tf.bool)
+        boolAct2 = tf.cast(recurrence_relation1, tf.bool)
+        recurrence_relationF = tf.logical_or(boolAct, boolAct2)
+        recurrence_relationF = tf.cast(recurrence_relationF, tf.float32)
+
+        recurrence_relation = recurrence_relationF
+
+
+
+    return recurrence_relation
+
+def ctc_loss_log_custom_prior_with_recMatrix_computation(pred, labels, pred_len, token_len, weightPrior,doSSG):
+    '''
+    this is the same as ctc_loss_log_custom, but with the weighted label prior
+    :param pred: (batch,Time, voca_size+1)
+    :param labels: (batch,U,3)
+    :param pred_len: (batch,1)
+    :param token_len: (batch,1)
+    :param weightPrior: float, weight of the label prior ($\Psi$ in the paper)
+    :param doSSG: bool, if true use SSG, else use HSG
+    '''
+    pred = tf.transpose(pred, [1, 0, 2])  # ( Time,batch, voca_size+1)
+    pred = tf.math.log_softmax(pred)
+    sm = tf.exp(pred)
+    avg_sm = tf.stop_gradient(tf.reduce_mean(sm, axis=0, keepdims=True))  # (1,1,dim)
+    pred = pred - safe_log(avg_sm)*weightPrior
+    Time, batch = tf.shape(pred)[0], tf.shape(pred)[1]
+    token = labels[:, :, 0]  # (batch,U)
+    U = tf.shape(token)[1]
+    eps_nan = -1e8
+
+    # token_with_blank
+    token_with_blank = tf.concat((tf.zeros([batch, U, 1], dtype=tf.int32), tf.cast(token[:, :, tf.newaxis], tf.int32)),
+                                 axis=2)  # (batch, U,2)
+    token_with_blank = tf.reshape(token_with_blank, [batch, -1])  # (batch, 2*U)
+    # add a blank at the end of elems
+    token_with_blank = tf.concat((token_with_blank, tf.zeros([batch, 1], dtype=tf.int32)), axis=1)  # (batch, 2U+1)
+    # token_with_blank: [blank, index_e1,blank, index_e2, .... eU, blank]
+    # replace all -1 by zeros
+    token_with_blank = tf.where(token_with_blank == -1, tf.zeros_like(token_with_blank), token_with_blank)
+
+    length = tf.shape(token_with_blank)[1]  # 2U+1
+
+    pred = tf.gather(pred, tf.repeat(token_with_blank[tf.newaxis, :, :], Time, axis=0), axis=2,
+                     batch_dims=2)  # (T, batch, 2U+1)]
+
+    # recurrence relation
+    # sec_diag = T.cat((T.zeros((batch, 2)).type(floatX), T.ne(token_with_blank[:, :-2], token_with_blank[:, 2:]).type(floatX)), dim=1) * T.ne(token_with_blank, blank).type(floatX)	# (batch, 2U+1)
+    # recurrence_relation = (m_eye(length) + m_eye(length, k=1)).repeat(batch, 1, 1) + m_eye(length, k=2).repeat(batch, 1, 1) * sec_diag[:, None, :]	# (batch, 2U+1, 2U+1)
+    # recurrenceMatrix = tf.where(recurrenceMatrix != -1, recurrenceMatrix, tf.zeros_like(recurrenceMatrix, tf.float32))
+    # tf.print("recu matrix , ", recurrenceMatrix, summarize = -1)
+    recurrenceMatrix = compute_recurrence_Matrix_from_labels(labels, pred_len,doSSG)
+    recurrence_relation = eps_nan * (tf.ones_like(recurrenceMatrix, tf.float32) - recurrenceMatrix)
+
+    # alpha
+    alpha_t = tf.concat((pred[0, :, :2], tf.ones([batch, 2 * U + 1 - 2], dtype=tf.float32) * eps_nan),
+                        axis=1)  # (batch, 2U+1)
+    probability = tf.zeros([Time, batch, length], tf.float32)  # (1, batch, 2U+1)
+    probability = tf.tensor_scatter_nd_update(probability, [[0]], alpha_t[tf.newaxis])
+
+    # dynamic programming
+    # (T, batch, 2U+1)
+    # for t in T.arange(1, Time).type(longX):
+    #     alpha_t = log_batch_dot(alpha_t, recurrence_relation) + pred[t]
+    #     probability = T.cat((probability, alpha_t[None]), dim=0)
+
+    def do(t, alpha_t, probability):
+        alpha_t = log_batch_dot(alpha_t, recurrence_relation[:, t - 1]) + pred[t, :, :]
+        # beta_t = log_sum_exp(log_batch_dot(beta_t, recurrence_relation[:,t]) + pred[t, :, :],
+        #                      tf.math.log(-pred[t] + eps) + alpha_t)
+        probability = tf.tensor_scatter_nd_update(probability, [[t]], alpha_t[tf.newaxis])
+        # betas = tf.tensor_scatter_nd_update(betas, [[t]], beta_t[tf.newaxis])
+        return t + 1, alpha_t, probability
+
+    i = tf.constant(1)
+    i, alpha_t, probability = tf.while_loop(lambda i, at, a: i < Time, do,
+                                            [i, alpha_t, probability])
+
+    # labels_2 = probability[pred_len-1, T.arange(batch).type(longX), 2*token_len-1]
+    # labels_1 = probability[pred_len-1, T.arange(batch).type(longX), 2*token_len]
+    probability = tf.transpose(probability, [1, 0, 2])
+    # tf.print("proba , ", probability, summarize = -1)
+    # pred len : [batch,1]
+    # tf.print("token , pred , len", token_len, pred_len,summarize = -1)   # print(pred_len)
+    probability = tf.squeeze(tf.gather(probability, pred_len - 1, axis=1, batch_dims=1), axis=1)
+    # probability = probability[Time - 1, :, :]  # last true elem
+    # token_len : [batch,1]
+    realTokenlen = (token_len * 2 + 1)
+    realTokenlenLess2 = realTokenlen - 2
+    realTokenlenLess1 = realTokenlen - 1
+    # ensure that the token is minimum 0
+    realTokenlenLess2 = tf.where(realTokenlenLess2 < 0, tf.zeros_like(realTokenlenLess2), realTokenlenLess2)
+    realTokenlenLess1 = tf.where(realTokenlenLess1 < 0, tf.zeros_like(realTokenlenLess1), realTokenlenLess1)
+
+
+
+
+    labels_2 = tf.squeeze(tf.gather(probability, realTokenlenLess2, axis=1, batch_dims=1), axis=1)
+    # labels_2 = probability[:, length-2]#last true elem
+    labels_1 = tf.squeeze(tf.gather(probability, realTokenlenLess1, axis=1, batch_dims=1), axis=1)
+    # labels_1 = probability[:, length-1] #blank
+
+    # labels_2 = tf.repeat(labels_2[tf.newaxis,:],batch,axis=0) #last true elem
+    # labels_1 = tf.repeat(labels_1[tf.newaxis,:],batch,axis=0) #last true elem
+    # labels_1 = tf.repeat(probability[token_len - 1,tf.newaxis, :, length-1],batch,axis=0)#last true elem
+    # tf.print("labels_2", tf.shape(labels_2))
+    # tf.print("labels_1", tf.shape(labels_1))
+    # tf.print("labels_2", labels_2)
+    # tf.print("labels_1", labels_1)
+
+    labels_prob = log_sum_exp(labels_2, labels_1)
+    #     pdb.set_trace()
+    # tf.print("labels_prob",labels_prob,summarize = -1)
+    cost = -labels_prob
+    return cost
+
 @tf.function
 def ctc_loss_log_normal(pred, token, pred_len, token_len, prior,weightPrior=1.0):
     '''

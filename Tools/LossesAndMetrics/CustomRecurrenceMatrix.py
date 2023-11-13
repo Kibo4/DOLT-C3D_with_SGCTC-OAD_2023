@@ -87,7 +87,7 @@ def exportGraphFromMatrix(matrix,labelInvolved,path):
                         G.add_edge((t, idLine), (t + 1, idCol))
 
     graphFromMatrix(matrix)
-    fig = plt.figure(figsize=(200, 80))
+    fig = plt.figure(figsize=(40, 10))
     nx.draw_networkx_nodes(G, pos=node_pos, node_color=node_colors, alpha=node_alpha)
     nx.draw_networkx_edges(G, pos=node_pos)
     plt.xlabel('Time step')
