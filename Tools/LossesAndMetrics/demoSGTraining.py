@@ -254,45 +254,32 @@ plt.show()
 #%%dam = tf.keras.optimizers.Adam(learning_rate=0.001,    name='Adam')
 # lengthLabels = tf.convert_to_tensor([nbElemPerSeq]*batch)[:,tf.newaxis]
 # nbForInputLength = tf.convert_to_tensor([nbForInput]*batch)[:,tf.newaxis]
-modelGuided = MyModel()
-modelGuided.compile(optimizer=adam,
-              loss=[lambda true,pred:lossSegmentationGuidedAndLabelPrior(true,pred,psi=0)],
-              loss_weights=[0.1, 0.2],
-              # loss=lambda true,pred:ctc_ent_loss_log(pred,true+1,nbElemPerSeq),
-              metrics=[])
-checkpoint_filepath = ".data/models/simpleCTC"
-model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath=checkpoint_filepath,
-    monitor='val_loss',
-    mode='min',
-    save_best_only=True)
+modelsGuided = [MyModel() for i in range(5)]
+for id, mod in modelsGuided:
+    mod.compile(optimizer=adam,
+                  loss=[lambda true,pred:lossSegmentationGuidedAndLabelPrior(true,pred,psi=id*0.2)],
+                  # loss=lambda true,pred:ctc_ent_loss_log(pred,true+1,nbElemPerSeq),
+                  metrics=[])
+    checkpoint_filepath = ".data/models/simpleCTC"
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        monitor='val_loss',
+        mode='min',
+        save_best_only=True)
+
 
 #%%
-historyGuidedCTC = modelGuided.fit(train_ds, epochs=5, callbacks=[model_checkpoint_callback],
-                             steps_per_epoch=60000 / nbForInput / batch,
-                             validation_data=test_ds, verbose=2)
 
 #%%
-EvalAndStat(model, x_test_seq, y_test_seq)
-#%%
-# plot the result on one sequence
-sample = 7
-_, axs = plt.subplots(2, nbForInput // 2, figsize=(28, 5))
-axs = axs.flatten()
-currentframe = 0
-currentId = 0
+histories = []
 
-#infer the sample
-out = model(x_test_seq[sample, tf.newaxis])[0]
-out = tf.argmax(out, axis=-1)
+for id, mod in enumerate(modelsGuided):
+    print("Training model with id ",id,"psi = ",id*0.2)
+    histories.append(mod.fit(train_ds, epochs=10,callbacks=[model_checkpoint_callback],steps_per_epoch=60000/nbForInput/batch,
+                        validation_data=test_ds,verbose=2))
 
-for img, ax in zip(x_test_seq[sample, :], axs):
-    ax.imshow(img)
-    # for the correponding label using start and end frames
-    ax.set_title(out[currentframe].numpy() - 1)
-    currentframe += 1
-    #remove x and yticks
-    ax.set_xticks([])
-    ax.set_yticks([])
 
-plt.show()
+
+for id, mod in enumerate(modelsGuided):
+    print("Eval model with id ",id,"psi = ",id*0.2)
+    EvalAndStat(mod,x_test_seq,y_test_seq)
