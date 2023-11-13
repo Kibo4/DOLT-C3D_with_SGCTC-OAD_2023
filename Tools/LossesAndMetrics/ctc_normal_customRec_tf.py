@@ -299,11 +299,11 @@ def ctc_loss_log_custom_prior(pred, token, pred_len, token_len, recurrenceMatrix
     return cost
 
 
-def compute_recurrence_Matrix_from_labels(labels, seqLen,doSSG):
+def compute_recurrence_Matrix_from_labels(labels, Time, doSSG):
     """
 
     :param labels: [batch, U, 3] (3 is classId, start, end)
-    :param seqLen: [batch]
+    :param Time: int max time
     :param doSSG: bool
     :return:
     """
@@ -317,8 +317,8 @@ def compute_recurrence_Matrix_from_labels(labels, seqLen,doSSG):
 
 
     # truncate start and end to be inside the sequence (0 and seqLen-1), do it in the labels, keep the same shape
-    labels = tf.concat([tf.expand_dims(tf.clip_by_value(labels[:,:,0], 0, seqLen-1), axis=2),
-                        tf.expand_dims(tf.clip_by_value(labels[:,:,1], 0, seqLen-1), axis=2),
+    labels = tf.concat([tf.expand_dims(tf.clip_by_value(labels[:,:,0], 0, Time - 1), axis=2),
+                        tf.expand_dims(tf.clip_by_value(labels[:,:,1], 0, Time - 1), axis=2),
                         tf.expand_dims(labels[:,:,2], axis=2)], axis=2)
 
 
@@ -354,22 +354,22 @@ def compute_recurrence_Matrix_from_labels(labels, seqLen,doSSG):
     # recurrence_relation = eps_nan * (tf.ones_like(recurrence_relation) - recurrence_relation)
 
     # repeat for each time in seqLen -> (batch, seqLen, 2U+1, 2U+1)
-    recurrence_relation = tf.repeat(recurrence_relation[:, tf.newaxis, :, :], repeats=seqLen, axis=1)
+    recurrence_relation = tf.repeat(recurrence_relation[:, tf.newaxis, :, :], repeats=Time, axis=1)
 
     # considering the index of frames (start and end) labels[:, :, 1:3], create the tensor of the shape [batch,seqLen,U] with ones if the class is present in the frame
     # (batch, seqLen, U, 2)
-    actionPosition = tf.repeat(tf.expand_dims(labels[:, :, 1:3], axis=1), repeats=seqLen, axis=1)
+    actionPosition = tf.repeat(tf.expand_dims(labels[:, :, 1:3], axis=1), repeats=Time, axis=1)
     # (batch, seqLen, U)
-    actionPosition = tf.cast(tf.logical_and(tf.repeat(tf.range(seqLen)[tf.newaxis,:,tf.newaxis], repeats=U, axis=2) >= actionPosition[:, :, :, 0]-1,
-                                       tf.repeat(tf.range(seqLen)[tf.newaxis,:,tf.newaxis], repeats=U, axis=2) <= actionPosition[:, :, :, 1]-1), tf.float32)
+    actionPosition = tf.cast(tf.logical_and(tf.repeat(tf.range(Time)[tf.newaxis, :, tf.newaxis], repeats=U, axis=2) >= actionPosition[:, :, :, 0] - 1,
+                                            tf.repeat(tf.range(Time)[tf.newaxis, :, tf.newaxis], repeats=U, axis=2) <= actionPosition[:, :, :, 1] - 1), tf.float32)
 
     # in the last dim, add zeros between each element, and before and after
     start_end = actionPosition[:, :, :, tf.newaxis]
     start_end = tf.pad(start_end, [[0, 0], [0, 0], [0, 0], [0, 1]], constant_values=1)
     # (batch, seqLen, 2U+1, 2U+1)
-    start_end = tf.reshape(start_end, [batch, seqLen, twoUP1-1])
+    start_end = tf.reshape(start_end, [batch, Time, twoUP1 - 1])
     #pad with zeros on the left (only one zero at right)
-    start_end = tf.concat((tf.ones((batch, seqLen, 1), dtype=tf.float32), start_end), axis=2)
+    start_end = tf.concat((tf.ones((batch, Time, 1), dtype=tf.float32), start_end), axis=2)
 
     recurrence_relation = recurrence_relation * (start_end[:, :, tf.newaxis, :])
     # print("start_end", start_end[0])
@@ -380,8 +380,8 @@ def compute_recurrence_Matrix_from_labels(labels, seqLen,doSSG):
         blankPosition = 1-actionPosition
         blank_start_end = blankPosition[:, :, :, tf.newaxis]
         blank_start_end = tf.pad(blank_start_end, [[0, 0], [0, 0], [0, 0], [1, 0]], constant_values=1)
-        blank_start_end = tf.reshape(blank_start_end, [batch, seqLen, twoUP1-1])
-        blank_start_end = tf.concat((tf.ones((batch, seqLen, 1), dtype=tf.float32), blank_start_end), axis=2)
+        blank_start_end = tf.reshape(blank_start_end, [batch, Time, twoUP1 - 1])
+        blank_start_end = tf.concat((tf.ones((batch, Time, 1), dtype=tf.float32), blank_start_end), axis=2)
         # print("blank_start_end", blank_start_end[0])
         recurrence_relation1 = recurrence_relation * (blank_start_end[:, :, tf.newaxis, :])
 
@@ -395,8 +395,8 @@ def compute_recurrence_Matrix_from_labels(labels, seqLen,doSSG):
         # actionPositionShifted2 = tf.pad(tf.cast(actionPositionShifted2,tf.float32), [[0,0],[0,0],[1,0]]) # (batch, seqLen, U)
         actionPositionShifted2 = actionPositionShifted2[:, :, :,tf.newaxis]
         actionPositionShifted2 = tf.pad(actionPositionShifted2, [[0, 0], [0, 0], [0, 0], [1, 0]], constant_values=1)
-        actionPositionShifted2 = tf.reshape(actionPositionShifted2, [batch, seqLen, twoUP1-1])
-        actionPositionShifted2 = tf.concat((tf.ones((batch, seqLen, 1), dtype=tf.float32), actionPositionShifted2), axis=2)
+        actionPositionShifted2 = tf.reshape(actionPositionShifted2, [batch, Time, twoUP1 - 1])
+        actionPositionShifted2 = tf.concat((tf.ones((batch, Time, 1), dtype=tf.float32), actionPositionShifted2), axis=2)
         # print("actionPositionShifted2", actionPositionShifted2[0])
 
         recurrence_relation2 = recurrence_relation * (actionPositionShifted2[:, :, tf.newaxis, :]) #* sec_diag[:, tf.newaxis,tf.newaxis, :]
@@ -453,7 +453,7 @@ def ctc_loss_log_custom_prior_with_recMatrix_computation(pred, labels, pred_len,
     # recurrence_relation = (m_eye(length) + m_eye(length, k=1)).repeat(batch, 1, 1) + m_eye(length, k=2).repeat(batch, 1, 1) * sec_diag[:, None, :]	# (batch, 2U+1, 2U+1)
     # recurrenceMatrix = tf.where(recurrenceMatrix != -1, recurrenceMatrix, tf.zeros_like(recurrenceMatrix, tf.float32))
     # tf.print("recu matrix , ", recurrenceMatrix, summarize = -1)
-    recurrenceMatrix = compute_recurrence_Matrix_from_labels(labels, pred_len,doSSG)
+    recurrenceMatrix = compute_recurrence_Matrix_from_labels(labels, Time,doSSG)
     recurrence_relation = eps_nan * (tf.ones_like(recurrenceMatrix, tf.float32) - recurrenceMatrix)
 
     # alpha

@@ -136,7 +136,7 @@ dilatationRates = [1, 2, 4, 8]
 config = {
     "batchSize": 4,
     # weight of the CTC loss, weight of CE per frame is (1-weightCTCLoss). if 0, only the per-frame loss is used
-    "weightCTCLoss": 0.9,
+    "weightCTCLoss": 1.0,
     "weightPrior": weightPrior,
     "weightSmoothing": 10.0,
     # weight of the background class (no actions), used for per-frame loss only
