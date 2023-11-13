@@ -192,9 +192,9 @@ def lossSegmentationGuidedAndLabelPrior(true,pred,psi=0):
     shapeOfTrue = tf.shape(true) #[batch,nbElemPerSeq]
     shapeOfPred = tf.shape(pred) #[batch,nbElemForInput,11]  # here the length of the sequence is always nbForInput, just repeat itf or each batch, but the loss support variable length
 
-    nbForInputPerBatch = tf.repeat(shapeOfTrue[1],repeats = tf.shape(true)[0],axis=0)[:,tf.newaxis]
+    nbForInputPerBatch = tf.repeat(shapeOfPred[1],repeats = tf.shape(true)[0],axis=0)[:,tf.newaxis]
     # the number of token per sequence is always the same here : nbElemPerSeq, but the loss support variable length
-    nbElemPerSeqPerBatch = tf.repeat(shapeOfPred[1],repeats = tf.shape(true)[0],axis=0)[:,tf.newaxis]
+    nbElemPerSeqPerBatch = tf.repeat(shapeOfTrue[1],repeats = tf.shape(true)[0],axis=0)[:,tf.newaxis]
 
     return ctc_loss_log_custom_prior_with_recMatrix_computation(pred,true,nbForInputPerBatch,nbElemPerSeqPerBatch,weightPrior=psi,doSSG=True)
 #%% md
@@ -211,7 +211,6 @@ modelNormal.compile(optimizer=adam,
               # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
               # loss=[lambda true,pred:lossSegmentationGuidedAndLabelPrior(true,pred,psi=0)],
               loss=[lossSimpleCTC],
-              loss_weights=[0.1,0.2],
               # loss=lambda true,pred:ctc_ent_loss_log(pred,true+1,nbElemPerSeq),
               metrics=[])
 checkpoint_filepath = ".data/models/simpleCTC"
@@ -223,7 +222,7 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
 
 #%%
 
-historyNormalCTC = modelNormal.fit(train_ds, epochs=5,callbacks=[model_checkpoint_callback],steps_per_epoch=60000/nbForInput/batch,
+historyNormalCTC = modelNormal.fit(train_ds, epochs=10,callbacks=[model_checkpoint_callback],steps_per_epoch=60000/nbForInput/batch,
                     validation_data=test_ds,verbose=2)
 #%%
 EvalAndStat(model,x_test_seq,y_test_seq)
@@ -255,12 +254,12 @@ plt.show()
 # lengthLabels = tf.convert_to_tensor([nbElemPerSeq]*batch)[:,tf.newaxis]
 # nbForInputLength = tf.convert_to_tensor([nbForInput]*batch)[:,tf.newaxis]
 modelsGuided = [MyModel() for i in range(5)]
-for id, mod in modelsGuided:
+for id, mod in enumerate(modelsGuided):
     mod.compile(optimizer=adam,
                   loss=[lambda true,pred:lossSegmentationGuidedAndLabelPrior(true,pred,psi=id*0.2)],
                   # loss=lambda true,pred:ctc_ent_loss_log(pred,true+1,nbElemPerSeq),
                   metrics=[])
-    checkpoint_filepath = ".data/models/simpleCTC"
+    checkpoint_filepath = f".data/models/guidedCTC{id*0.2}"
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
         monitor='val_loss',
