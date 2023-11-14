@@ -15,6 +15,10 @@ Early Action Detection at instance-level driven by a controlled CTC-Based Approa
   doi = {},
 }
 ```
+
+The notebook showing a simple usage of SG-CTC+ weighted label prior is shown in the notebook Tools/LossesAndMetrics/demo_SG-CTC_and_WeightedLabelPrior.ipynb
+: 
+[notebook](Tools/LossesAndMetrics/demo_SG-CTC_and_WeightedLabelPrior.ipynb)
 ## packages informations
 
 ### Package Evaluation
@@ -71,6 +75,8 @@ The training file takes as required input (args) :
 * hp.info name (in pathDB) (needed to find the right proprocessed folder containing the preprocessed data)
 * the Hyperparameter $\Psi$ (weight of the label prior) for training
 
+The file TrainingMatInLoss is the same as training.py but used the version of the loss which compute the recurrent matrix inside the loss (probably less efficient)
+Otherwise the reuccurent matrix is  commputed during the preprocessing
 ## Testing: export the bounds of the actions
 To evaluate with the evaluation framework (also available in another repository), you need to export the bounds of the actions of the test set.
 WARNING: only the exported sequence will be evaluated, so be careful to export all the sequences of the test set which correspond to the official test set (for comparison).
