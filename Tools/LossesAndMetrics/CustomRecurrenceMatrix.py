@@ -96,3 +96,5 @@ def exportGraphFromMatrix(matrix,labelInvolved,path):
     plt.xticks(range(0, len(matrix) ), labels=range(0, len(matrix) ))
     fig.savefig(path,dpi=fig.dpi)
     plt.close()
+
+
