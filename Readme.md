@@ -1,11 +1,11 @@
 # Online Action Detection : focus on earliness with OLT-C3D and CTC
 This code has been used to make the experiments of the following paper:
 
-Early Action Detection at instance-level driven by a controlled CTC-Based Approach", William Mocaër; Eric Anquetil; Richard Kulpa. July 2023
-
+"Early Gesture Detection in Untrimmed Streams: A Controlled CTC Approach for Reliable Decision-Making", William Mocaër; Eric Anquetil; Richard Kulpa. 2023
+preprint : http://ssrn.com/abstract=4656381  
 ```
 @article{mocaer2023,
-  title = {Early Action Detection at instance-level driven by a controlled CTC-Based Approach},
+  title = {Early Gesture Detection in Untrimmed Streams: A Controlled CTC Approach for Reliable Decision-Making},
   author = {Mocaër, William and Anquetil, Eric and Kulpa, Richard},
   year = {2023},
   journal = {},
