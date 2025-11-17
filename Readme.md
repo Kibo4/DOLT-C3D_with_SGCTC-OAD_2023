@@ -1,18 +1,21 @@
 # Online Action Detection : focus on earliness with OLT-C3D and CTC
 This code has been used to make the experiments of the following paper:
 
-"Early Gesture Detection in Untrimmed Streams: A Controlled CTC Approach for Reliable Decision-Making", William Mocaër; Eric Anquetil; Richard Kulpa. 2023
-preprint : http://ssrn.com/abstract=4656381  
+"Early Gesture Detection in Untrimmed Streams: A Controlled CTC Approach for Reliable Decision-Making", William Mocaër; Eric Anquetil; Richard Kulpa. 2024
+[Pattern Recognition (PR)](https://www.sciencedirect.com/science/article/pii/S0031320324004849) 
 ```
-@article{mocaer2023,
-  title = {Early Gesture Detection in Untrimmed Streams: A Controlled CTC Approach for Reliable Decision-Making},
-  author = {Mocaër, William and Anquetil, Eric and Kulpa, Richard},
-  year = {2023},
-  journal = {},
-  volume = {},
-  number = {},
-  pages = {},
-  doi = {},
+@article{MOCAER2024110733,
+title = {Early gesture detection in untrimmed streams: A controlled CTC approach for reliable decision-making},
+journal = {Pattern Recognition},
+volume = {156},
+pages = {110733},
+year = {2024},
+issn = {0031-3203},
+doi = {https://doi.org/10.1016/j.patcog.2024.110733},
+url = {https://www.sciencedirect.com/science/article/pii/S0031320324004849},
+author = {William Mocaër and Eric Anquetil and Richard Kulpa},
+keywords = {Online action detection, Gesture recognition, Early recognition, 3D CNN, CTC},
+abstract = {This paper focuses on the problem of online action detection for interactive systems, with a special emphasis on earliness. Online Action Detection (OAD) refers to the challenging task of recognizing gestures in untrimmed, streaming videos where the actions occur in unpredictable orders and durations. To address these challenges, we present a skeleton-based system for OAD incorporating a decision mechanism to accurately detect ongoing gestures. This allows us to provide instance-level output, achieving a high level of stream understanding. This mechanism relies on a novel Connectionist Temporal Classification (CTC) loss design that restricts the path possibilities according to the action boundaries. We also present a mechanism to tune the trade-off between accuracy and earliness according to the needs of the interactive system using a weighted label prior. This system includes a 3D CNN network, referred to as DOLT-C3D, exploiting the spatial–temporal information provided by the euclidean skeleton representation. We extensively evaluate our approach on eight publicly available datasets, demonstrating its superior performance compared to state-of-the-art methods in terms of both accuracy and earliness. We also successfully applied our approach to early 2D gestures detection. Furthermore, our system shows real-time performance, making it a suitable choice for interactive systems.}
 }
 ```
 
